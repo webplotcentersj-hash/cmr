@@ -12,23 +12,31 @@ Ejecuta la migración `20240104000000_auth_and_roles.sql` en tu proyecto de Supa
 
 ### 2. Crear Usuarios
 
-Los usuarios se crean a través de Supabase Auth. Hay dos formas:
+**📖 Ver guía detallada en [CREAR_USUARIOS.md](./CREAR_USUARIOS.md)**
 
-#### Opción A: Desde Supabase Dashboard
-1. Ve a Authentication → Users
-2. Click en "Add User" → "Create new user"
-3. Ingresa email y contraseña
-4. En "User Metadata", agrega:
+#### Método Rápido: Desde Supabase Dashboard
+1. Ve a **Authentication** → **Users** en Supabase Dashboard
+2. Click en **"Add User"** → **"Create new user"**
+3. Ingresa:
+   - **Email**: `compras@plotcenter.com` (ejemplo)
+   - **Password**: Una contraseña segura
+   - **Auto Confirm User**: ✅ Marca esta casilla
+4. En **"User Metadata"**, agrega:
    ```json
    {
-     "nombre": "Nombre del Usuario",
+     "nombre": "Juan Pérez",
      "role": "Compras"
    }
    ```
-5. El trigger automáticamente creará el perfil en `user_profiles`
+5. Click en **"Create User"**
+6. El trigger automáticamente creará el perfil en `user_profiles`
 
-#### Opción B: Desde la aplicación (requiere Admin)
-1. Un administrador puede crear usuarios desde la página de configuración (próximamente)
+**Roles disponibles:**
+- `"Compras"` - Puede aprobar pedidos y crear órdenes de compra
+- `"Taller Gráfico"` - Acceso general
+- `"Metalúrgica"` - Acceso general
+- `"Mostrador"` - Acceso general (rol por defecto)
+- `"Administrador"` - Acceso completo
 
 ### 3. Roles Disponibles
 
