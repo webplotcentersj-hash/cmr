@@ -80,3 +80,42 @@ export async function createProducto(producto: Omit<Producto, 'id'>): Promise<Pr
   }
 }
 
+export async function updateProducto(id: string, producto: Partial<Producto>): Promise<boolean> {
+  const supabase = createClient()
+  const updateData: any = {}
+  
+  if (producto.nombre !== undefined) updateData.nombre = producto.nombre
+  if (producto.categoria !== undefined) updateData.categoria = producto.categoria
+  if (producto.descripcion !== undefined) updateData.descripcion = producto.descripcion
+  if (producto.precioBase !== undefined) updateData.precio_base = producto.precioBase
+  if (producto.unidad !== undefined) updateData.unidad = producto.unidad
+  if (producto.activo !== undefined) updateData.activo = producto.activo
+
+  const { error } = await supabase
+    .from('productos')
+    .update(updateData)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating producto:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function deleteProducto(id: string): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('productos')
+    .update({ activo: false })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error deleting producto:', error)
+    return false
+  }
+
+  return true
+}
+

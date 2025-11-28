@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Producto } from '@/types'
-import { createProducto } from '@/lib/db/productos'
+import { createProducto, updateProducto } from '@/lib/db/productos'
 
 interface ProductoFormProps {
   producto?: Producto
@@ -43,10 +43,11 @@ export default function ProductoForm({ producto, onSuccess, onCancel }: Producto
 
     try {
       if (producto) {
-        // TODO: Implementar updateProducto
-        alert('Función de actualización próximamente')
+        await updateProducto(producto.id, formData)
+        alert('Producto actualizado correctamente!')
       } else {
         await createProducto(formData)
+        alert('Producto creado correctamente!')
       }
       onSuccess()
     } catch (error) {
