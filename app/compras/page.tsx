@@ -15,12 +15,18 @@ export default function ComprasPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingOrden, setEditingOrden] = useState<OrdenCompra | undefined>()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    articulo_id: number
+    cantidad: number
+    proveedor: string
+    observaciones: string
+    status: 'Pendiente' | 'En Proceso' | 'Completada' | 'Cancelada'
+  }>({
     articulo_id: 0,
     cantidad: 0,
     proveedor: 'Por definir',
     observaciones: '',
-    status: 'Pendiente' as const,
+    status: 'Pendiente',
   })
 
   const loadData = async () => {
@@ -275,7 +281,7 @@ export default function ComprasPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Pendiente' | 'En Proceso' | 'Completada' | 'Cancelada' })}
                 className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="Pendiente">Pendiente</option>
