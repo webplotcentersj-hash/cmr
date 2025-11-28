@@ -70,19 +70,12 @@ Esta guía te ayudará a configurar completamente tu CRM para que todas las func
 Una vez que la aplicación esté desplegada y funcionando:
 
 1. Visita tu aplicación desplegada: `https://tu-proyecto.vercel.app`
-2. Visita la URL del endpoint de seed: `https://tu-proyecto.vercel.app/api/seed`
-3. O desde la terminal local:
+2. Visita la página de seed: `https://tu-proyecto.vercel.app/seed`
+3. Haz clic en el botón **"Insertar Datos de Ejemplo"**
+4. O desde la terminal local:
    ```bash
    curl -X POST https://tu-proyecto.vercel.app/api/seed
    ```
-
-**Nota**: El endpoint `/api/seed` solo funciona con método POST. Si lo visitas desde el navegador, puedes usar una extensión como "REST Client" o hacer una petición POST desde la consola del navegador:
-
-```javascript
-fetch('/api/seed', { method: 'POST' })
-  .then(res => res.json())
-  .then(data => console.log(data))
-```
 
 ## Paso 8: Verificar que Todo Funcione
 
