@@ -4,24 +4,28 @@ import { useState, useEffect } from 'react'
 import { getProductos } from '@/lib/db/productos'
 import { Producto } from '@/types'
 import { Plus, Search, Package, DollarSign } from 'lucide-react'
+import Modal from '@/components/Modal'
+import ProductoForm from '@/components/forms/ProductoForm'
 
 export default function ProductosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [productosList, setProductosList] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const loadProductos = async () => {
+    try {
+      const data = await getProductos()
+      setProductosList(data)
+    } catch (error) {
+      console.error('Error loading productos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadProductos() {
-      try {
-        const data = await getProductos()
-        setProductosList(data)
-      } catch (error) {
-        console.error('Error loading productos:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
     loadProductos()
   }, [])
 
@@ -52,7 +56,10 @@ export default function ProductosPage() {
           </h1>
           <p className="text-orange-600 mt-2 font-medium">Catálogo de productos y servicios</p>
         </div>
-        <button className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
           <Plus className="w-5 h-5" />
           <span className="font-semibold">Nuevo Producto</span>
         </button>
@@ -137,6 +144,20 @@ export default function ProductosPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Nuevo Producto"
+      >
+        <ProductoForm
+          onSuccess={() => {
+            setIsModalOpen(false)
+            loadProductos()
+          }}
+          onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </div>
   )
 }

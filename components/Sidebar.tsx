@@ -8,7 +8,9 @@ import {
   FolderKanban, 
   Package, 
   FileText,
-  Settings 
+  Settings,
+  Calendar,
+  BarChart3
 } from 'lucide-react'
 
 const menuItems = [
@@ -17,6 +19,8 @@ const menuItems = [
   { href: '/proyectos', label: 'Proyectos', icon: FolderKanban },
   { href: '/productos', label: 'Productos', icon: Package },
   { href: '/presupuestos', label: 'Presupuestos', icon: FileText },
+  { href: '/calendario', label: 'Calendario', icon: Calendar },
+  { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ]
 
 export default function Sidebar() {

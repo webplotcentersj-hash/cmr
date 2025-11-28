@@ -1,29 +1,77 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getClientes } from '@/lib/db/clientes'
+import { getClientes, deleteCliente } from '@/lib/db/clientes'
 import { Cliente } from '@/types'
-import { Plus, Search, Mail, Phone, Building } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Building, Edit, Trash2, Download } from 'lucide-react'
 import Link from 'next/link'
+import Modal from '@/components/Modal'
+import ClienteForm from '@/components/forms/ClienteForm'
 
 export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [clientesList, setClientesList] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | undefined>()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+
+  const loadClientes = async () => {
+    try {
+      const data = await getClientes()
+      setClientesList(data)
+    } catch (error) {
+      console.error('Error loading clientes:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadClientes() {
-      try {
-        const data = await getClientes()
-        setClientesList(data)
-      } catch (error) {
-        console.error('Error loading clientes:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
     loadClientes()
   }, [])
+
+  const handleCreate = () => {
+    setSelectedCliente(undefined)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (cliente: Cliente) => {
+    setSelectedCliente(cliente)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
+      const success = await deleteCliente(id)
+      if (success) {
+        loadClientes()
+      } else {
+        alert('Error al eliminar el cliente')
+      }
+    }
+  }
+
+  const handleExport = () => {
+    const csv = [
+      ['Nombre', 'Email', 'Teléfono', 'Empresa', 'Ciudad', 'Dirección'].join(','),
+      ...clientesList.map(c => [
+        c.nombre,
+        c.email,
+        c.telefono,
+        c.empresa || '',
+        c.ciudad || '',
+        c.direccion || ''
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `clientes-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
 
   const filteredClientes = clientesList.filter(cliente =>
     cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -48,10 +96,22 @@ export default function ClientesPage() {
           </h1>
           <p className="text-purple-600 mt-2 font-medium">Gestiona tu base de clientes</p>
         </div>
-        <button className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
-          <Plus className="w-5 h-5" />
-          <span className="font-semibold">Nuevo Cliente</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleExport}
+            className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <Download className="w-4 h-4" />
+            <span className="font-semibold">Exportar CSV</span>
+          </button>
+          <button
+            onClick={handleCreate}
+            className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="font-semibold">Nuevo Cliente</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl border-2 border-blue-100">
@@ -117,12 +177,22 @@ export default function ClientesPage() {
                     {cliente.ciudad || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Link
-                      href={`/clientes/${cliente.id}`}
-                      className="text-purple-600 hover:text-purple-800 font-semibold hover:underline"
-                    >
-                      Ver detalles →
-                    </Link>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => handleEdit(cliente)}
+                        className="text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cliente.id)}
+                        className="text-red-600 hover:text-red-800 font-semibold hover:underline flex items-center"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -136,6 +206,21 @@ export default function ClientesPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedCliente ? 'Editar Cliente' : 'Nuevo Cliente'}
+      >
+        <ClienteForm
+          cliente={selectedCliente}
+          onSuccess={() => {
+            setIsModalOpen(false)
+            loadClientes()
+          }}
+          onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </div>
   )
 }
