@@ -10,7 +10,11 @@ import {
   FileText,
   Settings,
   Calendar,
-  BarChart3
+  BarChart3,
+  Warehouse,
+  ShoppingBag,
+  ShoppingCart,
+  DollarSign
 } from 'lucide-react'
 
 const menuItems = [
@@ -19,6 +23,10 @@ const menuItems = [
   { href: '/proyectos', label: 'Proyectos', icon: FolderKanban },
   { href: '/productos', label: 'Productos', icon: Package },
   { href: '/presupuestos', label: 'Presupuestos', icon: FileText },
+  { href: '/stock', label: 'Stock', icon: Warehouse },
+  { href: '/pedidos', label: 'Pedidos', icon: ShoppingBag },
+  { href: '/compras', label: 'Compras', icon: ShoppingCart },
+  { href: '/caja', label: 'Caja', icon: DollarSign },
   { href: '/calendario', label: 'Calendario', icon: Calendar },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ]

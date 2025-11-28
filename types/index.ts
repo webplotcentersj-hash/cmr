@@ -78,3 +78,85 @@ export interface Estadisticas {
   promedioTiempoProyecto: number;
 }
 
+// Sistema de Stock
+export interface Articulo {
+  id: number;
+  codigo: string;
+  descripcion: string;
+  sector: string;
+  imagen?: string;
+  stock: number;
+  stock_minimo: number;
+  precio: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Pedido {
+  id: number;
+  client_name: string;
+  description: string;
+  image_url?: string;
+  status: string;
+  created_at: Date;
+  updated_at: Date;
+  cliente_id?: string;
+  approval_status: 'Pendiente' | 'Aprobado' | 'Rechazado';
+  approved_by?: string;
+  approved_at?: Date;
+  rejection_reason?: string;
+}
+
+export interface PedidoItem {
+  id: number;
+  pedido_id: number;
+  articulo_id: number;
+  cantidad: number;
+  stock_disponible: number;
+  created_at: Date;
+}
+
+export interface OrdenCompra {
+  id: number;
+  articulo_id: number;
+  cantidad: number;
+  proveedor: string;
+  observaciones?: string;
+  pedido_id?: number;
+  status: 'Pendiente' | 'En Proceso' | 'Completada' | 'Cancelada';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface MovimientoCaja {
+  id: number;
+  tipo: 'Ingreso' | 'Egreso';
+  categoria: string;
+  concepto: string;
+  monto: number;
+  metodo_pago: string;
+  pedido_id?: number;
+  proyecto_id?: string;
+  observaciones?: string;
+  created_at: Date;
+}
+
+export interface Notification {
+  id: number;
+  user_id?: string;
+  title?: string;
+  message: string;
+  type: string;
+  related_id?: number;
+  is_read: boolean;
+  created_at: Date;
+}
+
+export interface Comment {
+  id: number;
+  pedido_id: number;
+  user_id?: string;
+  content: string;
+  created_at: Date;
+}
+
