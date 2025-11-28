@@ -9,11 +9,11 @@ export default function ConfiguracionPage() {
         <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           Configuración
         </h1>
-        <p className="text-purple-600 mt-600 mt-2 font-medium">Ajustes y preferencias del sistema</p>
+        <p className="text-purple-600 mt-2 font-medium">Ajustes y preferencias del sistema</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 to-indigo-600 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
+        <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-300">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg">
               <User className="w-6 h-6 text-white" />

@@ -25,7 +25,7 @@ export default function ProductosPage() {
     loadProductos()
   }, [])
 
-  const categorias = Array.from(new Set(productos.map(p => p.categoria)))
+  const categorias = Array.from(new Set(productosList.map(p => p.categoria)))
 
   const filteredProductos = productosList.filter(producto => {
     const matchesSearch = 
