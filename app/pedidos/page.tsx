@@ -1,30 +1,37 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getPedidos, approvePedido, rejectPedido, getPedidoItems } from '@/lib/db/pedidos'
+import { getPedidos, approvePedido, rejectPedido, getPedidoItems, deletePedido } from '@/lib/db/pedidos'
 import { getClientes } from '@/lib/db/clientes'
-import { Pedido, PedidoItem, Cliente } from '@/types'
-import { Plus, Search, CheckCircle, XCircle, Eye, Package, Filter } from 'lucide-react'
+import { getArticulos } from '@/lib/db/articulos'
+import { Pedido, PedidoItem, Cliente, Articulo } from '@/types'
+import { Plus, Search, CheckCircle, XCircle, Eye, Package, Filter, Edit, Trash2 } from 'lucide-react'
 import Modal from '@/components/Modal'
+import PedidoForm from '@/components/forms/PedidoForm'
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [articulos, setArticulos] = useState<Articulo[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [approvalFilter, setApprovalFilter] = useState('all')
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
   const [pedidoItems, setPedidoItems] = useState<PedidoItem[]>([])
   const [showPreview, setShowPreview] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingPedido, setEditingPedido] = useState<Pedido | undefined>()
 
   const loadPedidos = async () => {
     try {
-      const [pedidosData, clientesData] = await Promise.all([
+      const [pedidosData, clientesData, articulosData] = await Promise.all([
         getPedidos(approvalFilter === 'all' ? undefined : approvalFilter),
         getClientes(),
+        getArticulos(),
       ])
       setPedidos(pedidosData)
       setClientes(clientesData)
+      setArticulos(articulosData)
     } catch (error) {
       console.error('Error loading pedidos:', error)
     } finally {
@@ -62,6 +69,27 @@ export default function PedidosPage() {
     }
   }
 
+  const handleCreate = () => {
+    setEditingPedido(undefined)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (pedido: Pedido) => {
+    setEditingPedido(pedido)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este pedido?')) {
+      const success = await deletePedido(id)
+      if (success) {
+        loadPedidos()
+      } else {
+        alert('Error al eliminar el pedido')
+      }
+    }
+  }
+
   const filteredPedidos = pedidos.filter(p => {
     if (searchTerm && !p.client_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !p.description.toLowerCase().includes(searchTerm.toLowerCase())) return false
@@ -85,7 +113,10 @@ export default function PedidosPage() {
           </h1>
           <p className="text-orange-600 mt-2 font-medium">Gestiona los pedidos de clientes</p>
         </div>
-        <button className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+        <button
+          onClick={handleCreate}
+          className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
           <Plus className="w-5 h-5" />
           <span className="font-semibold">Nuevo Pedido</span>
         </button>
@@ -174,6 +205,13 @@ export default function PedidosPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => handleEdit(pedido)}
+                          className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
                         {pedido.approval_status === 'Pendiente' && (
                           <>
                             <button
@@ -192,6 +230,13 @@ export default function PedidosPage() {
                             </button>
                           </>
                         )}
+                        <button
+                          onClick={() => handleDelete(pedido.id)}
+                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -229,15 +274,50 @@ export default function PedidosPage() {
             <div>
               <h3 className="font-semibold text-gray-700 mb-2">Artículos</h3>
               <div className="space-y-2">
-                {pedidoItems.map(item => (
-                  <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Artículo ID: {item.articulo_id} - Cantidad: {item.cantidad}</p>
-                  </div>
-                ))}
+                {pedidoItems.length > 0 ? (
+                  pedidoItems.map(item => {
+                    const articulo = articulos.find(a => a.id === item.articulo_id)
+                    return (
+                      <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-semibold text-gray-800">
+                          {articulo ? `${articulo.codigo} - ${articulo.descripcion}` : `Artículo ID: ${item.articulo_id}`}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Cantidad: {item.cantidad} | Stock disponible: {item.stock_disponible}
+                        </p>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-gray-500">No hay artículos en este pedido</p>
+                )}
               </div>
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingPedido(undefined)
+        }}
+        title={editingPedido ? 'Editar Pedido' : 'Nuevo Pedido'}
+        size="xl"
+      >
+        <PedidoForm
+          pedido={editingPedido}
+          onSuccess={() => {
+            setIsModalOpen(false)
+            setEditingPedido(undefined)
+            loadPedidos()
+          }}
+          onCancel={() => {
+            setIsModalOpen(false)
+            setEditingPedido(undefined)
+          }}
+        />
       </Modal>
     </div>
   )

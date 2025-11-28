@@ -188,3 +188,75 @@ export async function addPedidoItem(item: Omit<PedidoItem, 'id' | 'created_at'>)
   }
 }
 
+export async function createPedidoWithItems(
+  pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at'>,
+  items: Omit<PedidoItem, 'id' | 'pedido_id' | 'created_at'>[]
+): Promise<Pedido | null> {
+  // Crear el pedido primero
+  const pedidoCreado = await createPedido(pedido)
+  if (!pedidoCreado) return null
+
+  // Crear los items del pedido
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map(item => ({
+      pedido_id: pedidoCreado.id,
+      articulo_id: item.articulo_id,
+      cantidad: item.cantidad,
+      stock_disponible: item.stock_disponible,
+    }))
+
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('pedidos_items')
+      .insert(itemsToInsert)
+
+    if (error) {
+      console.error('Error creating pedido items:', error)
+      // Eliminar el pedido si falla la inserción de items
+      await supabase.from('pedidos').delete().eq('id', pedidoCreado.id)
+      return null
+    }
+  }
+
+  return pedidoCreado
+}
+
+export async function updatePedido(id: number, pedido: Partial<Pedido>): Promise<boolean> {
+  const supabase = createClient()
+  const updateData: any = {}
+  
+  if (pedido.client_name !== undefined) updateData.client_name = pedido.client_name
+  if (pedido.description !== undefined) updateData.description = pedido.description
+  if (pedido.image_url !== undefined) updateData.image_url = pedido.image_url
+  if (pedido.status !== undefined) updateData.status = pedido.status
+  if (pedido.cliente_id !== undefined) updateData.cliente_id = pedido.cliente_id
+  if (pedido.approval_status !== undefined) updateData.approval_status = pedido.approval_status
+
+  const { error } = await supabase
+    .from('pedidos')
+    .update(updateData)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating pedido:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function deletePedido(id: number): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('pedidos')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error deleting pedido:', error)
+    return false
+  }
+
+  return true
+}
+
