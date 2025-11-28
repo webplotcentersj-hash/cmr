@@ -3,10 +3,19 @@
 import { useState, useEffect } from 'react'
 import { getArticulos, createArticulo, updateArticulo, deleteArticulo } from '@/lib/db/articulos'
 import { Articulo } from '@/types'
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Package, AlertTriangle, FolderOpen, Printer, Monitor, Wrench, ShoppingCart } from 'lucide-react'
 import Modal from '@/components/Modal'
 
 const SECTORS = ['Gral', 'Imprenta', 'Mostrador', 'Taller', 'Compras']
+
+const SECTOR_CONFIG = {
+  'all': { label: 'Todos', icon: Package, color: 'blue' },
+  'Gral': { label: 'General', icon: FolderOpen, color: 'gray' },
+  'Imprenta': { label: 'Imprenta', icon: Printer, color: 'purple' },
+  'Mostrador': { label: 'Mostrador', icon: Monitor, color: 'blue' },
+  'Taller': { label: 'Taller', icon: Printer, color: 'green' },
+  'Compras': { label: 'Compras', icon: ShoppingCart, color: 'orange' },
+}
 
 export default function StockPage() {
   const [articulos, setArticulos] = useState<Articulo[]>([])
@@ -129,28 +138,45 @@ export default function StockPage() {
       </div>
 
       <div className="bg-gradient-to-br from-white to-emerald-50 rounded-2xl shadow-xl border-2 border-emerald-100">
-        <div className="p-4 border-b-2 border-emerald-200 bg-gradient-to-r from-emerald-500/10 to-teal-500/10">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Buscar por código o descripción..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border-2 border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 bg-white/80 backdrop-blur-sm"
-              />
-            </div>
-            <select
-              value={selectedSector}
-              onChange={(e) => setSelectedSector(e.target.value)}
-              className="border-2 border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white/80 backdrop-blur-sm font-medium text-emerald-700"
-            >
-              <option value="all">Todos los sectores</option>
-              {SECTORS.map(sector => (
-                <option key={sector} value={sector}>{sector}</option>
-              ))}
-            </select>
+        <div className="p-6 border-b-2 border-emerald-200 bg-gradient-to-r from-emerald-500/10 to-teal-500/10">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Lista de Artículos</h2>
+          
+          {/* Filtros por sector - Botones */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {Object.entries(SECTOR_CONFIG).map(([key, config]) => {
+              const Icon = config.icon
+              const isActive = selectedSector === key
+              const colorClasses = {
+                blue: isActive ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100',
+                gray: isActive ? 'bg-gray-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100',
+                purple: isActive ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100',
+                green: isActive ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100',
+                orange: isActive ? 'bg-orange-600 text-white' : 'bg-orange-50 text-orange-700 hover:bg-orange-100',
+              }
+              
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedSector(key)}
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${colorClasses[config.color as keyof typeof colorClasses]}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{config.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Buscar por código o descripción..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border-2 border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 bg-white/80 backdrop-blur-sm"
+            />
           </div>
         </div>
 
@@ -179,9 +205,24 @@ export default function StockPage() {
                       <div className="text-sm text-gray-800">{articulo.descripcion}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded">
-                        {articulo.sector}
-                      </span>
+                      <select
+                        value={articulo.sector}
+                        onChange={async (e) => {
+                          const nuevoSector = e.target.value
+                          const success = await updateArticulo(articulo.id, { sector: nuevoSector })
+                          if (success) {
+                            loadArticulos()
+                          } else {
+                            alert('Error al actualizar el sector')
+                          }
+                        }}
+                        className="px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded border border-emerald-300 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {SECTORS.map(sector => (
+                          <option key={sector} value={sector}>{sector}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
