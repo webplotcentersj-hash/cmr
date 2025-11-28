@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getClientes, deleteCliente } from '@/lib/db/clientes'
 import { Cliente } from '@/types'
-import { Plus, Search, Mail, Phone, Building, Edit, Trash2, Download } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Building, Edit, Trash2, Download, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Modal from '@/components/Modal'
 import ClienteForm from '@/components/forms/ClienteForm'
@@ -71,6 +71,25 @@ export default function ClientesPage() {
     a.href = url
     a.download = `clientes-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
+  }
+
+  const handleWhatsApp = (cliente: Cliente) => {
+    if (!cliente.telefono) {
+      alert('Este cliente no tiene número de teléfono registrado')
+      return
+    }
+
+    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, etc.)
+    const numeroLimpio = cliente.telefono.replace(/\D/g, '')
+    
+    // Si el número no empieza con código de país, agregar código de Argentina (54)
+    const numeroFinal = numeroLimpio.startsWith('54') ? numeroLimpio : `54${numeroLimpio}`
+    
+    // Mensaje predefinido
+    const mensaje = encodeURIComponent(`Hola ${cliente.nombre}, te contacto desde Plot Center CRM.`)
+    
+    // Abrir WhatsApp
+    window.open(`https://wa.me/${numeroFinal}?text=${mensaje}`, '_blank')
   }
 
   const filteredClientes = clientesList.filter(cliente =>
@@ -178,6 +197,16 @@ export default function ClientesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-3">
+                      {cliente.telefono && (
+                        <button
+                          onClick={() => handleWhatsApp(cliente)}
+                          className="text-green-600 hover:text-green-800 font-semibold hover:underline flex items-center bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors"
+                          title="Abrir WhatsApp"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          WhatsApp
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEdit(cliente)}
                         className="text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center"
