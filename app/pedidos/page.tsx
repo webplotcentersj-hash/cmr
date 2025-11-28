@@ -5,9 +5,10 @@ import { getPedidos, approvePedido, rejectPedido, getPedidoItems, deletePedido }
 import { getClientes } from '@/lib/db/clientes'
 import { getArticulos } from '@/lib/db/articulos'
 import { Pedido, PedidoItem, Cliente, Articulo } from '@/types'
-import { Plus, Search, CheckCircle, XCircle, Eye, Package, Filter, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Eye, Package, Filter, Edit, Trash2, MessageSquare } from 'lucide-react'
 import Modal from '@/components/Modal'
 import PedidoForm from '@/components/forms/PedidoForm'
+import PedidoDetailModal from '@/components/PedidoDetailModal'
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
@@ -17,10 +18,15 @@ export default function PedidosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [approvalFilter, setApprovalFilter] = useState('all')
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
-  const [pedidoItems, setPedidoItems] = useState<PedidoItem[]>([])
   const [showPreview, setShowPreview] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [editingPedido, setEditingPedido] = useState<Pedido | undefined>()
+  const [approvalComment, setApprovalComment] = useState('')
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{ type: 'approve' | 'reject', pedidoId: number } | null>(null)
 
   const loadPedidos = async () => {
     try {
@@ -45,27 +51,55 @@ export default function PedidosPage() {
 
   const handlePreview = async (pedido: Pedido) => {
     setSelectedPedido(pedido)
-    const items = await getPedidoItems(pedido.id)
-    setPedidoItems(items)
-    setShowPreview(true)
+    setIsDetailModalOpen(true)
   }
 
-  const handleApprove = async (id: number) => {
-    if (confirm('¿Aprobar este pedido?')) {
-      const success = await approvePedido(id, 'current-user-id')
-      if (success) {
-        loadPedidos()
+  const handleApproveClick = (pedido: Pedido) => {
+    setPendingAction({ type: 'approve', pedidoId: pedido.id })
+    setSelectedPedido(pedido)
+    setShowApprovalModal(true)
+  }
+
+  const handleRejectClick = (pedido: Pedido) => {
+    setPendingAction({ type: 'reject', pedidoId: pedido.id })
+    setSelectedPedido(pedido)
+    setShowRejectionModal(true)
+  }
+
+  const handleApprove = async () => {
+    if (!pendingAction) return
+    
+    const success = await approvePedido(pendingAction.pedidoId, 'current-user-id', approvalComment || undefined)
+    if (success) {
+      setShowApprovalModal(false)
+      setApprovalComment('')
+      setPendingAction(null)
+      loadPedidos()
+      if (selectedPedido) {
+        setSelectedPedido({ ...selectedPedido, approval_status: 'Aprobado' })
       }
+    } else {
+      alert('Error al aprobar el pedido')
     }
   }
 
-  const handleReject = async (id: number) => {
-    const reason = prompt('Motivo del rechazo:')
-    if (reason) {
-      const success = await rejectPedido(id, reason)
-      if (success) {
-        loadPedidos()
+  const handleReject = async () => {
+    if (!pendingAction || !rejectionReason.trim()) {
+      alert('Debes ingresar un motivo para rechazar el pedido')
+      return
+    }
+    
+    const success = await rejectPedido(pendingAction.pedidoId, rejectionReason, 'current-user-id')
+    if (success) {
+      setShowRejectionModal(false)
+      setRejectionReason('')
+      setPendingAction(null)
+      loadPedidos()
+      if (selectedPedido) {
+        setSelectedPedido({ ...selectedPedido, approval_status: 'Rechazado', rejection_reason: rejectionReason })
       }
+    } else {
+      alert('Error al rechazar el pedido')
     }
   }
 
@@ -201,9 +235,9 @@ export default function PedidosPage() {
                         <button
                           onClick={() => handlePreview(pedido)}
                           className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Ver detalles"
+                          title="Ver detalles y comentarios"
                         >
-                          <Eye className="w-4 h-4" />
+                          <MessageSquare className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleEdit(pedido)}
@@ -215,16 +249,16 @@ export default function PedidosPage() {
                         {pedido.approval_status === 'Pendiente' && (
                           <>
                             <button
-                              onClick={() => handleApprove(pedido.id)}
+                              onClick={() => handleApproveClick(pedido)}
                               className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Aprobar"
+                              title="Aprobar pedido"
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleReject(pedido.id)}
+                              onClick={() => handleRejectClick(pedido)}
                               className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Rechazar"
+                              title="Rechazar pedido"
                             >
                               <XCircle className="w-4 h-4" />
                             </button>
@@ -254,47 +288,111 @@ export default function PedidosPage() {
         )}
       </div>
 
+      {/* Modal de detalles con comentarios */}
+      <PedidoDetailModal
+        pedido={selectedPedido}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false)
+          setSelectedPedido(null)
+        }}
+        onUpdate={loadPedidos}
+      />
+
+      {/* Modal de aprobación */}
       <Modal
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-        title={`Pedido: ${selectedPedido?.client_name}`}
-        size="lg"
+        isOpen={showApprovalModal}
+        onClose={() => {
+          setShowApprovalModal(false)
+          setApprovalComment('')
+          setPendingAction(null)
+        }}
+        title="Aprobar Pedido"
       >
-        {selectedPedido && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">Descripción</h3>
-              <p className="text-gray-600">{selectedPedido.description}</p>
-            </div>
-            {selectedPedido.image_url && (
-              <div>
-                <img src={selectedPedido.image_url} alt="Pedido" className="w-full rounded-lg" />
-              </div>
-            )}
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">Artículos</h3>
-              <div className="space-y-2">
-                {pedidoItems.length > 0 ? (
-                  pedidoItems.map(item => {
-                    const articulo = articulos.find(a => a.id === item.articulo_id)
-                    return (
-                      <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm font-semibold text-gray-800">
-                          {articulo ? `${articulo.codigo} - ${articulo.descripcion}` : `Artículo ID: ${item.articulo_id}`}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          Cantidad: {item.cantidad} | Stock disponible: {item.stock_disponible}
-                        </p>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-sm text-gray-500">No hay artículos en este pedido</p>
-                )}
-              </div>
-            </div>
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            ¿Estás seguro de que quieres aprobar este pedido?
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comentario (opcional)
+            </label>
+            <textarea
+              value={approvalComment}
+              onChange={(e) => setApprovalComment(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Agrega un comentario sobre la aprobación..."
+            />
           </div>
-        )}
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                setShowApprovalModal(false)
+                setApprovalComment('')
+                setPendingAction(null)
+              }}
+              className="px-4 py-2 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleApprove}
+              className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg"
+            >
+              Aprobar Pedido
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de rechazo */}
+      <Modal
+        isOpen={showRejectionModal}
+        onClose={() => {
+          setShowRejectionModal(false)
+          setRejectionReason('')
+          setPendingAction(null)
+        }}
+        title="Rechazar Pedido"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            ¿Estás seguro de que quieres rechazar este pedido?
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Motivo del rechazo *
+            </label>
+            <textarea
+              required
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Explica el motivo del rechazo..."
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                setShowRejectionModal(false)
+                setRejectionReason('')
+                setPendingAction(null)
+              }}
+              className="px-4 py-2 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={!rejectionReason.trim()}
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Rechazar Pedido
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <Modal

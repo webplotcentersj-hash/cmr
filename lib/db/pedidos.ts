@@ -123,7 +123,7 @@ export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'u
   }
 }
 
-export async function approvePedido(id: number, approvedBy: string): Promise<boolean> {
+export async function approvePedido(id: number, approvedBy: string, comment?: string): Promise<boolean> {
   const supabase = createClient()
   const { error } = await supabase
     .from('pedidos')
@@ -131,6 +131,7 @@ export async function approvePedido(id: number, approvedBy: string): Promise<boo
       approval_status: 'Aprobado',
       approved_by: approvedBy,
       approved_at: new Date().toISOString(),
+      rejection_reason: null, // Limpiar razón de rechazo si existía
     })
     .eq('id', id)
 
@@ -139,16 +140,33 @@ export async function approvePedido(id: number, approvedBy: string): Promise<boo
     return false
   }
 
+  // Agregar comentario si se proporciona
+  if (comment) {
+    await supabase.from('comments').insert({
+      pedido_id: id,
+      user_id: approvedBy,
+      content: `✅ Pedido aprobado: ${comment}`,
+    })
+  } else {
+    await supabase.from('comments').insert({
+      pedido_id: id,
+      user_id: approvedBy,
+      content: '✅ Pedido aprobado',
+    })
+  }
+
   return true
 }
 
-export async function rejectPedido(id: number, reason: string): Promise<boolean> {
+export async function rejectPedido(id: number, reason: string, rejectedBy: string): Promise<boolean> {
   const supabase = createClient()
   const { error } = await supabase
     .from('pedidos')
     .update({
       approval_status: 'Rechazado',
       rejection_reason: reason,
+      approved_by: null,
+      approved_at: null,
     })
     .eq('id', id)
 
@@ -156,6 +174,13 @@ export async function rejectPedido(id: number, reason: string): Promise<boolean>
     console.error('Error rejecting pedido:', error)
     return false
   }
+
+  // Agregar comentario con la razón del rechazo
+  await supabase.from('comments').insert({
+    pedido_id: id,
+    user_id: rejectedBy,
+    content: `❌ Pedido rechazado: ${reason}`,
+  })
 
   return true
 }
