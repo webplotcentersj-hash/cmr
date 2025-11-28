@@ -191,6 +191,7 @@ export default function PedidosPage() {
           <table className="w-full">
             <thead className="bg-gradient-to-r from-orange-100 to-red-100">
               <tr>
+                <th className="px-6 py-4 text-left text-xs font-bold text-orange-700 uppercase">Número</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-orange-700 uppercase">Cliente</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-orange-700 uppercase">Descripción</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-orange-700 uppercase">Estado</th>
@@ -204,6 +205,9 @@ export default function PedidosPage() {
                 const cliente = clientes.find(c => c.id === pedido.cliente_id)
                 return (
                   <tr key={pedido.id} className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-purple-600">{pedido.numero}</div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-800">{pedido.client_name}</div>
                       {cliente && <div className="text-xs text-gray-500">{cliente.email}</div>}

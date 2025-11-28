@@ -94,6 +94,7 @@ export interface Articulo {
 
 export interface Pedido {
   id: number;
+  numero: string;
   client_name: string;
   description: string;
   image_url?: string;

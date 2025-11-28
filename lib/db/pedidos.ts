@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Pedido, PedidoItem } from '@/types'
+import { createPedidoNotification } from './notifications'
 
 export async function getPedidos(approvalStatus?: string): Promise<Pedido[]> {
   const supabase = createClient()
@@ -21,6 +22,7 @@ export async function getPedidos(approvalStatus?: string): Promise<Pedido[]> {
 
   return data.map((item: any) => ({
     id: item.id,
+    numero: item.numero || `PED-${item.id}`,
     client_name: item.client_name,
     description: item.description,
     image_url: item.image_url,
@@ -50,6 +52,7 @@ export async function getPedidoById(id: number): Promise<Pedido | null> {
 
   return {
     id: data.id,
+    numero: data.numero || `PED-${data.id}`,
     client_name: data.client_name,
     description: data.description,
     image_url: data.image_url,
@@ -87,7 +90,7 @@ export async function getPedidoItems(pedidoId: number): Promise<PedidoItem[]> {
   }))
 }
 
-export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at'>): Promise<Pedido | null> {
+export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'numero'>): Promise<Pedido | null> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('pedidos')
@@ -109,6 +112,7 @@ export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'u
 
   return {
     id: data.id,
+    numero: data.numero || `PED-${data.id}`,
     client_name: data.client_name,
     description: data.description,
     image_url: data.image_url,
@@ -125,6 +129,14 @@ export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'u
 
 export async function approvePedido(id: number, approvedBy: string, comment?: string): Promise<boolean> {
   const supabase = createClient()
+  
+  // Obtener el pedido para tener el número y cliente_id
+  const { data: pedido } = await supabase
+    .from('pedidos')
+    .select('numero, cliente_id')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase
     .from('pedidos')
     .update({
@@ -155,18 +167,36 @@ export async function approvePedido(id: number, approvedBy: string, comment?: st
     })
   }
 
+  // Crear notificación de aprobación
+  const pedidoNumero = pedido?.numero || `PED-${id}`
+  await createPedidoNotification(
+    id,
+    pedidoNumero,
+    'approved',
+    pedido?.cliente_id || undefined,
+    comment || `El pedido ${pedidoNumero} ha sido aprobado.`
+  )
+
   return true
 }
 
 export async function rejectPedido(id: number, reason: string, rejectedBy: string): Promise<boolean> {
   const supabase = createClient()
+  
+  // Obtener el pedido para tener el número y cliente_id
+  const { data: pedido } = await supabase
+    .from('pedidos')
+    .select('numero, cliente_id')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase
     .from('pedidos')
     .update({
       approval_status: 'Rechazado',
       rejection_reason: reason,
-      approved_by: null,
-      approved_at: null,
+      approved_by: rejectedBy,
+      approved_at: new Date().toISOString(),
     })
     .eq('id', id)
 
@@ -181,6 +211,16 @@ export async function rejectPedido(id: number, reason: string, rejectedBy: strin
     user_id: rejectedBy,
     content: `❌ Pedido rechazado: ${reason}`,
   })
+
+  // Crear notificación de rechazo
+  const pedidoNumero = pedido?.numero || `PED-${id}`
+  await createPedidoNotification(
+    id,
+    pedidoNumero,
+    'rejected',
+    pedido?.cliente_id || undefined,
+    `El pedido ${pedidoNumero} ha sido rechazado: ${reason}`
+  )
 
   return true
 }
@@ -214,10 +254,11 @@ export async function addPedidoItem(item: Omit<PedidoItem, 'id' | 'created_at'>)
 }
 
 export async function createPedidoWithItems(
-  pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at'>,
-  items: Omit<PedidoItem, 'id' | 'pedido_id' | 'created_at'>[]
+  pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'numero'>,
+  items: Omit<PedidoItem, 'id' | 'pedido_id' | 'created_at'>[],
+  createdByUserId?: string
 ): Promise<Pedido | null> {
-  // Crear el pedido primero
+  // Crear el pedido primero (el número se genera automáticamente por el trigger)
   const pedidoCreado = await createPedido(pedido)
   if (!pedidoCreado) return null
 
@@ -242,6 +283,10 @@ export async function createPedidoWithItems(
       return null
     }
   }
+
+  // Crear notificación de nuevo pedido
+  const pedidoNumero = pedidoCreado.numero || `PED-${pedidoCreado.id}`
+  await createPedidoNotification(pedidoCreado.id, pedidoNumero, 'created', createdByUserId)
 
   return pedidoCreado
 }

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS articulos (
 -- Tabla pedidos (pedidos de clientes)
 CREATE TABLE IF NOT EXISTS pedidos (
   id SERIAL PRIMARY KEY,
+  numero VARCHAR(50) UNIQUE NOT NULL,
   client_name VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
   image_url TEXT,
@@ -30,6 +31,42 @@ CREATE TABLE IF NOT EXISTS pedidos (
   approved_at TIMESTAMP WITH TIME ZONE,
   rejection_reason TEXT
 );
+
+-- Función para generar número automático de pedido
+CREATE OR REPLACE FUNCTION generar_numero_pedido() RETURNS TRIGGER AS $$
+DECLARE
+  nuevo_numero VARCHAR(50);
+  año_actual VARCHAR(4);
+  ultimo_numero INTEGER;
+BEGIN
+  -- Obtener el año actual
+  año_actual := TO_CHAR(NOW(), 'YYYY');
+  
+  -- Buscar el último número de pedido del año actual
+  SELECT COALESCE(MAX(CAST(SUBSTRING(numero FROM '[0-9]+$') AS INTEGER)), 0)
+  INTO ultimo_numero
+  FROM pedidos
+  WHERE numero LIKE 'PED-' || año_actual || '-%';
+  
+  -- Generar nuevo número: PED-YYYY-XXXX
+  nuevo_numero := 'PED-' || año_actual || '-' || LPAD((ultimo_numero + 1)::TEXT, 4, '0');
+  
+  -- Asignar el número al nuevo pedido
+  NEW.numero := nuevo_numero;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para generar número automático antes de insertar
+CREATE TRIGGER trigger_generar_numero_pedido
+BEFORE INSERT ON pedidos
+FOR EACH ROW
+WHEN (NEW.numero IS NULL OR NEW.numero = '')
+EXECUTE FUNCTION generar_numero_pedido();
+
+-- Índice para búsqueda rápida por número
+CREATE INDEX IF NOT EXISTS pedidos_numero_idx ON pedidos(numero);
 
 -- Tabla pedidos_items (artículos en cada pedido)
 CREATE TABLE IF NOT EXISTS pedidos_items (

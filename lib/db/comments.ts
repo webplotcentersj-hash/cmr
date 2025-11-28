@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Comment } from '@/types'
+import { createPedidoNotification } from './notifications'
 
 export async function getCommentsByPedido(pedidoId: number): Promise<Comment[]> {
   const supabase = createClient()
@@ -39,6 +40,23 @@ export async function createComment(comment: Omit<Comment, 'id' | 'created_at'>)
     console.error('Error creating comment:', error)
     return null
   }
+
+  // Obtener el número del pedido para la notificación
+  const { data: pedido } = await supabase
+    .from('pedidos')
+    .select('numero')
+    .eq('id', comment.pedido_id)
+    .single()
+
+  // Crear notificación de nuevo comentario
+  const pedidoNumero = pedido?.numero || `PED-${comment.pedido_id}`
+  await createPedidoNotification(
+    comment.pedido_id,
+    pedidoNumero,
+    'commented',
+    comment.user_id,
+    comment.content
+  )
 
   return {
     id: data.id,

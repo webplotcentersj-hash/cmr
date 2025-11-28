@@ -123,7 +123,8 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
         await updatePedido(pedido.id, pedidoData)
         alert('Pedido actualizado correctamente!')
       } else {
-        await createPedidoWithItems(pedidoData as any, items)
+        const currentUserId = 'current-user-id' // TODO: Replace with actual authenticated user ID
+        await createPedidoWithItems(pedidoData as any, items, currentUserId)
         alert('Pedido creado correctamente!')
       }
       onSuccess()
