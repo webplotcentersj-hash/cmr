@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getProyectos } from '@/lib/db/proyectos'
+import { getProyectos, deleteProyecto } from '@/lib/db/proyectos'
 import { getClientes } from '@/lib/db/clientes'
 import { Proyecto, Cliente } from '@/types'
-import { Plus, Search, Filter } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import Modal from '@/components/Modal'
+import ProyectoForm from '@/components/forms/ProyectoForm'
 
 export default function ProyectosPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -13,24 +15,48 @@ export default function ProyectosPage() {
   const [proyectosList, setProyectosList] = useState<Proyecto[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedProyecto, setSelectedProyecto] = useState<Proyecto | undefined>()
+
+  const loadData = async () => {
+    try {
+      const [proyectosData, clientesData] = await Promise.all([
+        getProyectos(),
+        getClientes(),
+      ])
+      setProyectosList(proyectosData)
+      setClientes(clientesData)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [proyectosData, clientesData] = await Promise.all([
-          getProyectos(),
-          getClientes(),
-        ])
-        setProyectosList(proyectosData)
-        setClientes(clientesData)
-      } catch (error) {
-        console.error('Error loading data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
     loadData()
   }, [])
+
+  const handleCreate = () => {
+    setSelectedProyecto(undefined)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (proyecto: Proyecto) => {
+    setSelectedProyecto(proyecto)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este proyecto?')) {
+      const success = await deleteProyecto(id)
+      if (success) {
+        loadData()
+      } else {
+        alert('Error al eliminar el proyecto')
+      }
+    }
+  }
 
   const filteredProyectos = proyectosList.filter(proyecto => {
     const cliente = clientes.find(c => c.id === proyecto.clienteId)
@@ -66,7 +92,10 @@ export default function ProyectosPage() {
           </h1>
           <p className="text-green-600 mt-2 font-medium">Gestiona tus proyectos y pedidos</p>
         </div>
-        <button className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+        <button
+          onClick={handleCreate}
+          className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
           <Plus className="w-5 h-5" />
           <span className="font-semibold">Nuevo Proyecto</span>
         </button>
@@ -155,12 +184,28 @@ export default function ProyectosPage() {
                       {proyecto.fechaEntrega?.toLocaleDateString('es-AR') || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        href={`/proyectos/${proyecto.id}`}
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        Ver detalles
-                      </Link>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleEdit(proyecto)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(proyecto.id)}
+                          className="text-red-600 hover:text-red-800 font-semibold hover:underline flex items-center"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Eliminar
+                        </button>
+                        <Link
+                          href={`/proyectos/${proyecto.id}`}
+                          className="text-green-600 hover:text-green-800 font-semibold hover:underline"
+                        >
+                          Ver detalles
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -175,6 +220,22 @@ export default function ProyectosPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedProyecto ? 'Editar Proyecto' : 'Nuevo Proyecto'}
+        size="lg"
+      >
+        <ProyectoForm
+          proyecto={selectedProyecto}
+          onSuccess={() => {
+            setIsModalOpen(false)
+            loadData()
+          }}
+          onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </div>
   )
 }

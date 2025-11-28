@@ -135,3 +135,81 @@ export async function getProyectosByCliente(clienteId: string): Promise<Proyecto
   }))
 }
 
+export async function createProyecto(proyecto: Omit<Proyecto, 'id' | 'fechaCreacion' | 'items'>): Promise<Proyecto | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('proyectos')
+    .insert({
+      cliente_id: proyecto.clienteId,
+      nombre: proyecto.nombre,
+      descripcion: proyecto.descripcion,
+      estado: proyecto.estado,
+      fecha_entrega: proyecto.fechaEntrega?.toISOString(),
+      presupuesto: proyecto.presupuesto,
+      costo_final: proyecto.costoFinal,
+      notas: proyecto.notas,
+    })
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error('Error creating proyecto:', error)
+    return null
+  }
+
+  return {
+    id: data.id,
+    clienteId: data.cliente_id,
+    nombre: data.nombre,
+    descripcion: data.descripcion,
+    estado: data.estado,
+    fechaCreacion: new Date(data.fecha_creacion),
+    fechaEntrega: data.fecha_entrega ? new Date(data.fecha_entrega) : undefined,
+    presupuesto: data.presupuesto ? parseFloat(data.presupuesto) : undefined,
+    costoFinal: data.costo_final ? parseFloat(data.costo_final) : undefined,
+    notas: data.notas,
+    items: [],
+  }
+}
+
+export async function updateProyecto(id: string, proyecto: Partial<Proyecto>): Promise<boolean> {
+  const supabase = createClient()
+  const updateData: any = {}
+  
+  if (proyecto.clienteId !== undefined) updateData.cliente_id = proyecto.clienteId
+  if (proyecto.nombre !== undefined) updateData.nombre = proyecto.nombre
+  if (proyecto.descripcion !== undefined) updateData.descripcion = proyecto.descripcion
+  if (proyecto.estado !== undefined) updateData.estado = proyecto.estado
+  if (proyecto.fechaEntrega !== undefined) updateData.fecha_entrega = proyecto.fechaEntrega?.toISOString()
+  if (proyecto.presupuesto !== undefined) updateData.presupuesto = proyecto.presupuesto
+  if (proyecto.costoFinal !== undefined) updateData.costo_final = proyecto.costoFinal
+  if (proyecto.notas !== undefined) updateData.notas = proyecto.notas
+
+  const { error } = await supabase
+    .from('proyectos')
+    .update(updateData)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating proyecto:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function deleteProyecto(id: string): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('proyectos')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error deleting proyecto:', error)
+    return false
+  }
+
+  return true
+}
+
