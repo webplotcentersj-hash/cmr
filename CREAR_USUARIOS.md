@@ -16,7 +16,7 @@
 2. **Password**: Ingresa una contraseña segura
 3. **Auto Confirm User**: ✅ Marca esta casilla para que el usuario pueda iniciar sesión inmediatamente
 
-### Paso 4: Configurar Metadata (IMPORTANTE)
+### Paso 4: Configurar Metadata (IMPORTANTE) ⚠️
 En la sección **"User Metadata"**, agrega el siguiente JSON:
 
 ```json
@@ -25,6 +25,24 @@ En la sección **"User Metadata"**, agrega el siguiente JSON:
   "role": "Compras"
 }
 ```
+
+**⚠️ Si olvidaste agregar el metadata o el rol no se guardó:**
+
+1. Crea el usuario normalmente (sin metadata si ya lo creaste)
+2. Ve a **SQL Editor** en Supabase
+3. Ejecuta este comando (reemplaza el email):
+```sql
+UPDATE user_profiles
+SET role = 'Compras'  -- Cambia el rol aquí
+WHERE email = 'tu-email@ejemplo.com';  -- Cambia el email aquí
+```
+
+**Roles válidos:**
+- `'Compras'`
+- `'Administrador'`
+- `'Taller Gráfico'`
+- `'Metalúrgica'`
+- `'Mostrador'`
 
 **Roles disponibles:**
 - `"Compras"` - Para usuarios del área de compras
