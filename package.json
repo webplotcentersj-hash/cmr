@@ -24,7 +24,7 @@
     "date-fns": "^3.0.6",
     "recharts": "^2.10.3",
     "@supabase/supabase-js": "^2.39.0",
-    "@supabase/ssr": "^0.1.0"
+    "@supabase/ssr": "^0.5.1"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
