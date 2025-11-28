@@ -101,6 +101,9 @@ export async function getPedidoItems(pedidoId: number): Promise<PedidoItem[]> {
 export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'numero'>): Promise<Pedido | null> {
   const supabase = createClient()
   
+  // Obtener usuario actual
+  const { data: { user } } = await supabase.auth.getUser()
+  
   // Preparar datos para inserción (sin numero, el trigger lo generará)
   const insertData: any = {
     client_name: pedido.client_name,
@@ -108,6 +111,7 @@ export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'u
     status: pedido.status,
     cliente_id: pedido.cliente_id || null,
     approval_status: pedido.approval_status,
+    user_id: user?.id || null, // Vincular con usuario creador
   }
   
   // Solo incluir image_url si tiene valor

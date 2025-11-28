@@ -1,7 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { getCurrentUser, UserProfile, canCreateOrdenesCompra } from '@/lib/auth'
 import { 
   LayoutDashboard, 
   Users, 
@@ -17,22 +19,33 @@ import {
   DollarSign
 } from 'lucide-react'
 
-const menuItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/clientes', label: 'Clientes', icon: Users },
-  { href: '/proyectos', label: 'Proyectos', icon: FolderKanban },
-  { href: '/productos', label: 'Productos', icon: Package },
-  { href: '/presupuestos', label: 'Presupuestos', icon: FileText },
-  { href: '/stock', label: 'Stock', icon: Warehouse },
-  { href: '/pedidos', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/compras', label: 'Compras', icon: ShoppingCart },
-  { href: '/caja', label: 'Caja', icon: DollarSign },
-  { href: '/calendario', label: 'Calendario', icon: Calendar },
-  { href: '/reportes', label: 'Reportes', icon: BarChart3 },
-]
-
 export default function Sidebar() {
   const pathname = usePathname()
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [canAccessCompras, setCanAccessCompras] = useState(false)
+
+  useEffect(() => {
+    async function loadUser() {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+      setCanAccessCompras(canCreateOrdenesCompra(currentUser))
+    }
+    loadUser()
+  }, [])
+
+  const menuItems = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/clientes', label: 'Clientes', icon: Users },
+    { href: '/proyectos', label: 'Proyectos', icon: FolderKanban },
+    { href: '/productos', label: 'Productos', icon: Package },
+    { href: '/presupuestos', label: 'Presupuestos', icon: FileText },
+    { href: '/stock', label: 'Stock', icon: Warehouse },
+    { href: '/pedidos', label: 'Pedidos', icon: ShoppingBag },
+    ...(canAccessCompras ? [{ href: '/compras', label: 'Compras', icon: ShoppingCart }] : []),
+    { href: '/caja', label: 'Caja', icon: DollarSign },
+    { href: '/calendario', label: 'Calendario', icon: Calendar },
+    { href: '/reportes', label: 'Reportes', icon: BarChart3 },
+  ]
 
   const menuColors = [
     { bg: 'bg-gradient-primary', hover: 'hover:from-purple-600 hover:to-pink-600' },
@@ -40,6 +53,12 @@ export default function Sidebar() {
     { bg: 'bg-gradient-secondary', hover: 'hover:from-orange-600 hover:to-yellow-600' },
     { bg: 'bg-gradient-success', hover: 'hover:from-green-600 hover:to-emerald-600' },
     { bg: 'bg-gradient-to-r from-pink-500 to-rose-500', hover: 'hover:from-pink-600 hover:to-rose-600' },
+    { bg: 'bg-gradient-to-r from-emerald-500 to-teal-500', hover: 'hover:from-emerald-600 hover:to-teal-600' },
+    { bg: 'bg-gradient-to-r from-amber-500 to-orange-500', hover: 'hover:from-amber-600 hover:to-orange-600' },
+    ...(canAccessCompras ? [{ bg: 'bg-gradient-to-r from-indigo-500 to-purple-500', hover: 'hover:from-indigo-600 hover:to-purple-600' }] : []),
+    { bg: 'bg-gradient-to-r from-lime-500 to-green-500', hover: 'hover:from-lime-600 hover:to-green-600' },
+    { bg: 'bg-gradient-to-r from-cyan-500 to-blue-500', hover: 'hover:from-cyan-600 hover:to-blue-600' },
+    { bg: 'bg-gradient-to-r from-red-500 to-orange-500', hover: 'hover:from-red-600 hover:to-orange-600' },
   ]
 
   return (
@@ -89,4 +108,3 @@ export default function Sidebar() {
     </aside>
   )
 }
-

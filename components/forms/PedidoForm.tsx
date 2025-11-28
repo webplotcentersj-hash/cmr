@@ -5,6 +5,7 @@ import { Pedido, PedidoItem, Cliente, Articulo } from '@/types'
 import { createPedidoWithItems, updatePedido } from '@/lib/db/pedidos'
 import { getClientes } from '@/lib/db/clientes'
 import { getArticulos } from '@/lib/db/articulos'
+import { createClient } from '@/lib/supabase/client'
 import { Plus, Trash2, Search, Package } from 'lucide-react'
 
 interface PedidoFormProps {
@@ -123,7 +124,15 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
         await updatePedido(pedido.id, pedidoData)
         alert('Pedido actualizado correctamente!')
       } else {
-        const currentUserId = 'current-user-id' // TODO: Replace with actual authenticated user ID
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const currentUserId = user?.id
+        
+        if (!currentUserId) {
+          alert('Debes estar autenticado para crear pedidos')
+          return
+        }
+        
         console.log('Creando pedido con datos:', pedidoData)
         console.log('Items:', items)
         const nuevoPedido = await createPedidoWithItems(pedidoData as any, items, currentUserId)

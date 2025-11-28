@@ -1,16 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { getOrdenesCompra, createOrdenCompra, updateOrdenCompra, deleteOrdenCompra } from '@/lib/db/compras'
 import { getArticulos } from '@/lib/db/articulos'
 import { OrdenCompra, Articulo } from '@/types'
-import { Plus, Search, Edit, Trash2, ShoppingCart, Filter, CheckCircle } from 'lucide-react'
+import { getCurrentUser, canCreateOrdenesCompra, UserProfile } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
+import { Plus, Search, Edit, Trash2, ShoppingCart, Filter, CheckCircle, AlertCircle } from 'lucide-react'
 import Modal from '@/components/Modal'
 
 export default function ComprasPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [canAccess, setCanAccess] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([])
   const [articulos, setArticulos] = useState<Articulo[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -45,8 +51,50 @@ export default function ComprasPage() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [statusFilter])
+    async function init() {
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        router.push('/login')
+        return
+      }
+      
+      const hasAccess = canCreateOrdenesCompra(currentUser)
+      if (!hasAccess) {
+        setLoading(false)
+        return
+      }
+      
+      setUser(currentUser)
+      setCanAccess(true)
+      await loadData()
+      setLoading(false)
+    }
+    init()
+  }, [statusFilter, router])
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Cargando...</div>
+      </div>
+    )
+  }
+  
+  if (!canAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertCircle className="w-16 h-16 text-red-500" />
+        <h2 className="text-2xl font-bold text-gray-800">Acceso Denegado</h2>
+        <p className="text-gray-600">Solo usuarios con rol "Compras" o "Administrador" pueden acceder a esta sección.</p>
+        <button
+          onClick={() => router.push('/')}
+          className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all"
+        >
+          Volver al Inicio
+        </button>
+      </div>
+    )
+  }
 
   const handleCreate = () => {
     setEditingOrden(undefined)

@@ -34,6 +34,10 @@ export async function getOrdenesCompra(status?: string): Promise<OrdenCompra[]> 
 
 export async function createOrdenCompra(orden: Omit<OrdenCompra, 'id' | 'created_at' | 'updated_at'>): Promise<OrdenCompra | null> {
   const supabase = createClient()
+  
+  // Obtener usuario actual
+  const { data: { user } } = await supabase.auth.getUser()
+  
   const { data, error } = await supabase
     .from('ordenes_compra')
     .insert({
@@ -43,6 +47,7 @@ export async function createOrdenCompra(orden: Omit<OrdenCompra, 'id' | 'created
       observaciones: orden.observaciones,
       pedido_id: orden.pedido_id,
       status: orden.status,
+      user_id: user?.id || null, // Vincular con usuario creador
     })
     .select()
     .single()

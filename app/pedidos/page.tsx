@@ -6,11 +6,15 @@ import { getClientes } from '@/lib/db/clientes'
 import { getArticulos } from '@/lib/db/articulos'
 import { Pedido, PedidoItem, Cliente, Articulo } from '@/types'
 import { Plus, Search, CheckCircle, XCircle, Eye, Package, Filter, Edit, Trash2, MessageSquare } from 'lucide-react'
+import { getCurrentUser, canApprovePedidos, UserProfile } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
 import Modal from '@/components/Modal'
 import PedidoForm from '@/components/forms/PedidoForm'
 import PedidoDetailModal from '@/components/PedidoDetailModal'
 
 export default function PedidosPage() {
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [canApprove, setCanApprove] = useState(false)
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [articulos, setArticulos] = useState<Articulo[]>([])
@@ -49,7 +53,13 @@ export default function PedidosPage() {
   }
 
   useEffect(() => {
-    loadPedidos()
+    async function init() {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+      setCanApprove(canApprovePedidos(currentUser))
+      await loadPedidos()
+    }
+    init()
   }, [approvalFilter])
 
   const handlePreview = async (pedido: Pedido) => {
@@ -70,9 +80,9 @@ export default function PedidosPage() {
   }
 
   const handleApprove = async () => {
-    if (!pendingAction) return
+    if (!pendingAction || !user) return
     
-    const success = await approvePedido(pendingAction.pedidoId, 'current-user-id', approvalComment || undefined)
+    const success = await approvePedido(pendingAction.pedidoId, user.id, approvalComment || undefined)
     if (success) {
       setShowApprovalModal(false)
       setApprovalComment('')
@@ -87,12 +97,12 @@ export default function PedidosPage() {
   }
 
   const handleReject = async () => {
-    if (!pendingAction || !rejectionReason.trim()) {
+    if (!pendingAction || !rejectionReason.trim() || !user) {
       alert('Debes ingresar un motivo para rechazar el pedido')
       return
     }
     
-    const success = await rejectPedido(pendingAction.pedidoId, rejectionReason, 'current-user-id')
+    const success = await rejectPedido(pendingAction.pedidoId, rejectionReason, user.id)
     if (success) {
       setShowRejectionModal(false)
       setRejectionReason('')
@@ -255,7 +265,7 @@ export default function PedidosPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        {pedido.approval_status === 'Pendiente' && (
+                        {pedido.approval_status === 'Pendiente' && canApprove && (
                           <>
                             <button
                               onClick={() => handleApproveClick(pedido)}
