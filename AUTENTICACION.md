@@ -105,9 +105,23 @@ Click en el icono de logout en el header (esquina superior derecha)
 - Las políticas RLS (Row Level Security) en Supabase protegen los datos
 - Los usuarios solo pueden ver/modificar datos según su rol
 
+## Verificar Usuario Creado
+
+Ejecuta el script `VERIFICAR_USUARIO.sql` en SQL Editor para verificar que:
+- El usuario existe en `auth.users`
+- El perfil se creó en `user_profiles`
+- El trigger funcionó correctamente
+
+## Próximos Pasos
+
+1. ✅ **Usuario creado** - Ya tienes tu primer usuario
+2. 🔐 **Iniciar sesión** - Ve a `/login` e inicia sesión con tu email y contraseña
+3. ✅ **Verificar permisos** - Según tu rol, verás diferentes opciones en el menú
+4. 👥 **Crear más usuarios** - Sigue la guía en `CREAR_USUARIOS.md` para crear usuarios adicionales
+
 ## Notas Importantes
 
-- El primer usuario debe crearse manualmente desde Supabase Dashboard
+- El primer usuario debe crearse manualmente desde Supabase Dashboard ✅ (Ya completado)
 - Los roles se asignan al crear el usuario (en metadata)
 - Para cambiar el rol de un usuario, actualiza el campo `role` en la tabla `user_profiles`
 - Los usuarios inactivos (`activo = false`) no pueden iniciar sesión
