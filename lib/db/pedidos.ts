@@ -100,23 +100,41 @@ export async function getPedidoItems(pedidoId: number): Promise<PedidoItem[]> {
 
 export async function createPedido(pedido: Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'numero'>): Promise<Pedido | null> {
   const supabase = createClient()
+  
+  // Preparar datos para inserción (sin numero, el trigger lo generará)
+  const insertData: any = {
+    client_name: pedido.client_name,
+    description: pedido.description,
+    status: pedido.status,
+    cliente_id: pedido.cliente_id || null,
+    approval_status: pedido.approval_status,
+  }
+  
+  // Solo incluir image_url si tiene valor
+  if (pedido.image_url) {
+    insertData.image_url = pedido.image_url
+  }
+  
+  console.log('Insertando pedido:', insertData)
+  
   const { data, error } = await supabase
     .from('pedidos')
-    .insert({
-      client_name: pedido.client_name,
-      description: pedido.description,
-      image_url: pedido.image_url,
-      status: pedido.status,
-      cliente_id: pedido.cliente_id,
-      approval_status: pedido.approval_status,
-    })
+    .insert(insertData)
     .select()
     .single()
 
-  if (error || !data) {
+  if (error) {
     console.error('Error creating pedido:', error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return null
   }
+
+  if (!data) {
+    console.error('No data returned from insert')
+    return null
+  }
+
+  console.log('Pedido creado exitosamente:', data)
 
   return {
     id: data.id,
@@ -266,18 +284,28 @@ export async function createPedidoWithItems(
   items: Omit<PedidoItem, 'id' | 'pedido_id' | 'created_at'>[],
   createdByUserId?: string
 ): Promise<Pedido | null> {
+  console.log('createPedidoWithItems - Iniciando creación de pedido con items')
+  
   // Crear el pedido primero (el número se genera automáticamente por el trigger)
   const pedidoCreado = await createPedido(pedido)
-  if (!pedidoCreado) return null
+  if (!pedidoCreado) {
+    console.error('Error: No se pudo crear el pedido')
+    return null
+  }
+
+  console.log('Pedido creado exitosamente, ID:', pedidoCreado.id)
 
   // Crear los items del pedido
   if (items && items.length > 0) {
+    console.log(`Creando ${items.length} items para el pedido`)
     const itemsToInsert = items.map(item => ({
       pedido_id: pedidoCreado.id,
       articulo_id: item.articulo_id,
       cantidad: item.cantidad,
-      stock_disponible: item.stock_disponible,
+      stock_disponible: item.stock_disponible || 0,
     }))
+
+    console.log('Items a insertar:', itemsToInsert)
 
     const supabase = createClient()
     const { error } = await supabase
@@ -286,16 +314,26 @@ export async function createPedidoWithItems(
 
     if (error) {
       console.error('Error creating pedido items:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       // Eliminar el pedido si falla la inserción de items
       await supabase.from('pedidos').delete().eq('id', pedidoCreado.id)
       return null
     }
+    
+    console.log('Items creados exitosamente')
+  } else {
+    console.warn('No hay items para insertar')
   }
 
-  // Crear notificación de nuevo pedido
-  const pedidoNumero = pedidoCreado.numero || `PED-${pedidoCreado.id}`
-  await createPedidoNotification(pedidoCreado.id, pedidoNumero, 'created', createdByUserId)
+  // Crear notificación de nuevo pedido (no bloqueamos si falla)
+  try {
+    const pedidoNumero = pedidoCreado.numero || `PED-${pedidoCreado.id}`
+    await createPedidoNotification(pedidoCreado.id, pedidoNumero, 'created', createdByUserId)
+  } catch (error) {
+    console.warn('Error al crear notificación (no crítico):', error)
+  }
 
+  console.log('Pedido creado completamente:', pedidoCreado)
   return pedidoCreado
 }
 
