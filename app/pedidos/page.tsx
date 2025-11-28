@@ -143,9 +143,11 @@ export default function PedidosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 bg-clip-text text-transparent">
-            Pedidos
+            Pedidos de Materiales
           </h1>
-          <p className="text-orange-600 mt-2 font-medium">Gestiona los pedidos de clientes</p>
+          <p className="text-orange-600 mt-2 font-medium">
+            Sistema de pedidos de stock - Los pedidos se envían al área de Compras para aprobación
+          </p>
         </div>
         <button
           onClick={handleCreate}

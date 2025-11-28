@@ -5,7 +5,7 @@ import { Pedido, PedidoItem, Cliente, Articulo } from '@/types'
 import { createPedidoWithItems, updatePedido } from '@/lib/db/pedidos'
 import { getClientes } from '@/lib/db/clientes'
 import { getArticulos } from '@/lib/db/articulos'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Search, Package } from 'lucide-react'
 
 interface PedidoFormProps {
   pedido?: Pedido | null
@@ -18,6 +18,7 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
   const [articulos, setArticulos] = useState<Articulo[]>([])
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<Omit<PedidoItem, 'id' | 'pedido_id' | 'created_at'>[]>([])
+  const [articuloSearchTerm, setArticuloSearchTerm] = useState<string[]>([]) // Array de términos de búsqueda por item
   const [formData, setFormData] = useState({
     clienteId: '',
     client_name: '',
@@ -67,10 +68,12 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
       cantidad: 1,
       stock_disponible: 0,
     }])
+    setArticuloSearchTerm([...articuloSearchTerm, ''])
   }
 
   const eliminarItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index))
+    setArticuloSearchTerm(articuloSearchTerm.filter((_, i) => i !== index))
   }
 
   const actualizarItem = (index: number, field: keyof PedidoItem, value: any) => {
@@ -82,10 +85,31 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
       const articulo = articulos.find(a => a.id === value)
       if (articulo) {
         nuevosItems[index].stock_disponible = articulo.stock
+        // Limpiar búsqueda cuando se selecciona un artículo
+        const nuevosTerminos = [...articuloSearchTerm]
+        nuevosTerminos[index] = ''
+        setArticuloSearchTerm(nuevosTerminos)
       }
     }
     
     setItems(nuevosItems)
+  }
+
+  const actualizarBusqueda = (index: number, term: string) => {
+    const nuevosTerminos = [...articuloSearchTerm]
+    nuevosTerminos[index] = term
+    setArticuloSearchTerm(nuevosTerminos)
+  }
+
+  const getArticulosFiltrados = (index: number) => {
+    const term = articuloSearchTerm[index]?.toLowerCase() || ''
+    if (!term) return articulos
+    
+    return articulos.filter(a => 
+      a.codigo.toLowerCase().includes(term) ||
+      a.descripcion.toLowerCase().includes(term) ||
+      a.sector.toLowerCase().includes(term)
+    )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,19 +262,67 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Artículo *</label>
-                  <select
-                    required
-                    value={item.articulo_id}
-                    onChange={(e) => actualizarItem(index, 'articulo_id', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                  >
-                    <option value="0">Seleccionar artículo</option>
-                    {articulos.map(articulo => (
-                      <option key={articulo.id} value={articulo.id}>
-                        {articulo.codigo} - {articulo.descripcion} (Stock: {articulo.stock})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      value={articuloSearchTerm[index] || ''}
+                      onChange={(e) => actualizarBusqueda(index, e.target.value)}
+                      placeholder="Buscar por código, descripción o sector..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    />
+                    {articuloSearchTerm[index] && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {getArticulosFiltrados(index).length > 0 ? (
+                          getArticulosFiltrados(index).map(articulo => (
+                            <button
+                              key={articulo.id}
+                              type="button"
+                              onClick={() => {
+                                actualizarItem(index, 'articulo_id', articulo.id)
+                                actualizarBusqueda(index, '')
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-orange-50 border-b border-gray-100 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-gray-800">{articulo.codigo}</p>
+                                  <p className="text-xs text-gray-600">{articulo.descripcion}</p>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                      {articulo.sector}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      articulo.stock <= articulo.stock_minimo 
+                                        ? 'bg-red-100 text-red-600' 
+                                        : 'bg-green-100 text-green-600'
+                                    }`}>
+                                      Stock: {articulo.stock}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Package className="w-5 h-5 text-gray-400 ml-2" />
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                            No se encontraron artículos
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {item.articulo_id > 0 && (
+                    <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-xs font-semibold text-orange-800">
+                        {articulos.find(a => a.id === item.articulo_id)?.codigo} - {articulos.find(a => a.id === item.articulo_id)?.descripcion}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Stock disponible: {item.stock_disponible} unidades
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <div>
