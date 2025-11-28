@@ -124,10 +124,14 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
         alert('Pedido actualizado correctamente!')
       } else {
         const currentUserId = 'current-user-id' // TODO: Replace with actual authenticated user ID
-        await createPedidoWithItems(pedidoData as any, items, currentUserId)
-        alert('Pedido creado correctamente!')
+        const nuevoPedido = await createPedidoWithItems(pedidoData as any, items, currentUserId)
+        if (nuevoPedido) {
+          alert(`Pedido creado correctamente! Número: ${nuevoPedido.numero}`)
+          onSuccess()
+        } else {
+          alert('Error al crear el pedido. Por favor, intenta nuevamente.')
+        }
       }
-      onSuccess()
     } catch (error) {
       console.error('Error saving pedido:', error)
       alert('Error al guardar el pedido.')

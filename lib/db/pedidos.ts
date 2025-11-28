@@ -17,8 +17,16 @@ export async function getPedidos(approvalStatus?: string): Promise<Pedido[]> {
 
   if (error) {
     console.error('Error fetching pedidos:', error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return []
   }
+
+  if (!data || data.length === 0) {
+    console.log('No hay pedidos en la base de datos')
+    return []
+  }
+
+  console.log(`Se encontraron ${data.length} pedidos`)
 
   return data.map((item: any) => ({
     id: item.id,

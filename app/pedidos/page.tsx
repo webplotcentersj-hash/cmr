@@ -29,17 +29,20 @@ export default function PedidosPage() {
   const [pendingAction, setPendingAction] = useState<{ type: 'approve' | 'reject', pedidoId: number } | null>(null)
 
   const loadPedidos = async () => {
+    setLoading(true)
     try {
       const [pedidosData, clientesData, articulosData] = await Promise.all([
         getPedidos(approvalFilter === 'all' ? undefined : approvalFilter),
         getClientes(),
         getArticulos(),
       ])
+      console.log('Pedidos cargados:', pedidosData.length)
       setPedidos(pedidosData)
       setClientes(clientesData)
       setArticulos(articulosData)
     } catch (error) {
       console.error('Error loading pedidos:', error)
+      alert('Error al cargar los pedidos. Por favor, recarga la página.')
     } finally {
       setLoading(false)
     }
@@ -286,10 +289,23 @@ export default function PedidosPage() {
           </table>
         </div>
 
-        {filteredPedidos.length === 0 && (
+        {filteredPedidos.length === 0 && !loading && (
           <div className="p-12 text-center">
             <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">No se encontraron pedidos</p>
+            <p className="text-gray-500 text-lg font-medium mb-2">
+              {pedidos.length === 0 
+                ? 'No hay pedidos creados aún' 
+                : 'No se encontraron pedidos con los filtros aplicados'}
+            </p>
+            {pedidos.length === 0 && (
+              <button
+                onClick={handleCreate}
+                className="mt-4 inline-flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="font-semibold">Crear Primer Pedido</span>
+              </button>
+            )}
           </div>
         )}
       </div>
