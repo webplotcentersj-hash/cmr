@@ -21,11 +21,7 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
   const [articuloSearchTerm, setArticuloSearchTerm] = useState<string[]>([]) // Array de términos de búsqueda por item
   const [formData, setFormData] = useState({
     clienteId: '',
-    client_name: '',
     description: '',
-    image_url: '',
-    status: 'Pendiente',
-    approval_status: 'Pendiente' as 'Pendiente' | 'Aprobado' | 'Rechazado',
   })
 
   useEffect(() => {
@@ -44,23 +40,10 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
     if (pedido) {
       setFormData({
         clienteId: pedido.cliente_id || '',
-        client_name: pedido.client_name,
         description: pedido.description,
-        image_url: pedido.image_url || '',
-        status: pedido.status,
-        approval_status: pedido.approval_status,
       })
     }
   }, [pedido])
-
-  const handleClienteChange = (clienteId: string) => {
-    const cliente = clientes.find(c => c.id === clienteId)
-    setFormData({
-      ...formData,
-      clienteId,
-      client_name: cliente ? cliente.nombre : '',
-    })
-  }
 
   const agregarItem = () => {
     setItems([...items, {
@@ -115,8 +98,8 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.client_name) {
-      alert('Debes ingresar el nombre del cliente')
+    if (!formData.description.trim()) {
+      alert('Debes ingresar una descripción del pedido')
       return
     }
     
@@ -128,12 +111,12 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
     setLoading(true)
     try {
       const pedidoData = {
-        client_name: formData.client_name,
+        client_name: 'Pedido de Materiales', // Nombre por defecto para pedidos de stock
         description: formData.description,
-        image_url: formData.image_url || undefined,
-        status: formData.status,
+        image_url: undefined,
+        status: 'Pendiente', // Siempre pendiente al crear
         cliente_id: formData.clienteId || undefined,
-        approval_status: formData.approval_status,
+        approval_status: 'Pendiente' as 'Pendiente', // Siempre pendiente al crear - será aprobado por Compras
       }
 
       if (pedido) {
@@ -154,15 +137,15 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente (opcional)</label>
           <select
             value={formData.clienteId}
-            onChange={(e) => handleClienteChange(e.target.value)}
+            onChange={(e) => setFormData({ ...formData, clienteId: e.target.value })}
             className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
-            <option value="">Seleccionar cliente (opcional)</option>
+            <option value="">Sin cliente asociado</option>
             {clientes.map(cliente => (
               <option key={cliente.id} value={cliente.id}>{cliente.nombre} {cliente.empresa && `- ${cliente.empresa}`}</option>
             ))}
@@ -170,63 +153,14 @@ export default function PedidoForm({ pedido, onSuccess, onCancel }: PedidoFormPr
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente *</label>
-          <input
-            type="text"
-            required
-            value={formData.client_name}
-            onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Nombre del cliente"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción del Pedido *</label>
           <textarea
             required
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
+            rows={4}
             className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Descripción detallada del pedido..."
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="Pendiente">Pendiente</option>
-            <option value="En Proceso">En Proceso</option>
-            <option value="Completado">Completado</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Aprobación</label>
-          <select
-            value={formData.approval_status}
-            onChange={(e) => setFormData({ ...formData, approval_status: e.target.value as any })}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="Pendiente">Pendiente</option>
-            <option value="Aprobado">Aprobado</option>
-            <option value="Rechazado">Rechazado</option>
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">URL de Imagen</label>
-          <input
-            type="text"
-            value={formData.image_url}
-            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="https://..."
+            placeholder="Describe el pedido de materiales necesario..."
           />
         </div>
       </div>
