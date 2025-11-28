@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getPresupuestos } from '@/lib/db/presupuestos'
+import { getPresupuestos, deletePresupuesto } from '@/lib/db/presupuestos'
 import { getClientes } from '@/lib/db/clientes'
 import { getProyectos } from '@/lib/db/proyectos'
 import { Presupuesto, Cliente, Proyecto } from '@/types'
-import { Plus, Search, FileText, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Plus, Search, FileText, CheckCircle, XCircle, Clock, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import Modal from '@/components/Modal'
+import PresupuestoForm from '@/components/forms/PresupuestoForm'
 
 export default function PresupuestosPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -15,26 +17,50 @@ export default function PresupuestosPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [proyectos, setProyectos] = useState<Proyecto[]>([])
   const [loading, setLoading] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedPresupuesto, setSelectedPresupuesto] = useState<Presupuesto | undefined>()
+
+  const loadData = async () => {
+    try {
+      const [presupuestosData, clientesData, proyectosData] = await Promise.all([
+        getPresupuestos(),
+        getClientes(),
+        getProyectos(),
+      ])
+      setPresupuestosList(presupuestosData)
+      setClientes(clientesData)
+      setProyectos(proyectosData)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [presupuestosData, clientesData, proyectosData] = await Promise.all([
-          getPresupuestos(),
-          getClientes(),
-          getProyectos(),
-        ])
-        setPresupuestosList(presupuestosData)
-        setClientes(clientesData)
-        setProyectos(proyectosData)
-      } catch (error) {
-        console.error('Error loading data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
     loadData()
   }, [])
+
+  const handleCreate = () => {
+    setSelectedPresupuesto(undefined)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (presupuesto: Presupuesto) => {
+    setSelectedPresupuesto(presupuesto)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este presupuesto?')) {
+      const success = await deletePresupuesto(id)
+      if (success) {
+        loadData()
+      } else {
+        alert('Error al eliminar el presupuesto')
+      }
+    }
+  }
 
   const filteredPresupuestos = presupuestosList.filter(presupuesto => {
     const cliente = clientes.find(c => c.id === presupuesto.clienteId)
@@ -76,7 +102,10 @@ export default function PresupuestosPage() {
           </h1>
           <p className="text-pink-600 mt-2 font-medium">Gestiona tus presupuestos y cotizaciones</p>
         </div>
-        <button className="flex items-center space-x-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-xl hover:from-pink-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+        <button
+          onClick={handleCreate}
+          className="flex items-center space-x-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-xl hover:from-pink-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
           <Plus className="w-5 h-5" />
           <span className="font-semibold">Nuevo Presupuesto</span>
         </button>
@@ -174,12 +203,28 @@ export default function PresupuestosPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        href={`/presupuestos/${presupuesto.id}`}
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        Ver detalles
-                      </Link>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleEdit(presupuesto)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold hover:underline flex items-center"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(presupuesto.id)}
+                          className="text-red-600 hover:text-red-800 font-semibold hover:underline flex items-center"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Eliminar
+                        </button>
+                        <Link
+                          href={`/presupuestos/${presupuesto.id}`}
+                          className="text-pink-600 hover:text-pink-800 font-semibold hover:underline"
+                        >
+                          Ver detalles
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -194,6 +239,26 @@ export default function PresupuestosPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedPresupuesto ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
+        size="xl"
+      >
+        <PresupuestoForm
+          presupuesto={selectedPresupuesto}
+          onSuccess={() => {
+            setIsModalOpen(false)
+            setSelectedPresupuesto(undefined)
+            loadData()
+          }}
+          onCancel={() => {
+            setIsModalOpen(false)
+            setSelectedPresupuesto(undefined)
+          }}
+        />
+      </Modal>
     </div>
   )
 }
